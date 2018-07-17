@@ -52,9 +52,9 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 				return
 			}
 
-			var workflowID string
-
 			for _, alert := range alertGroup.Alerts {
+				var workflowID string
+
 				for k, v := range alert.Labels.(map[string]interface{}) {
 					if k == "vro_action" {
 						workflowID = v.(string)
