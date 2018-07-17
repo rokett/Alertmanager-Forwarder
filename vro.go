@@ -63,7 +63,8 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 				}
 
 				if workflowID == "" {
-					logger.Error("Alert is missing vro_action; skipping.")
+					msg := fmt.Sprintf("Alert is missing vro_action; skipping.\n\n%s", alert.Labels)
+					logger.Error(msg)
 
 					continue
 				}
