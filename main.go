@@ -21,7 +21,7 @@ var (
 	glPort            = flag.Int("graylog-port", 0, "Graylog listener port")
 	vroHost           = flag.String("vro-host", "", "Define the vRO host used to build the API URL (including the port).  For example 'vco.mydomain.com:8281'")
 	vroAuth           = flag.String("vro-auth", "", "Define the base64 encoded authorisation header string.  For example 'dmNvdXNlcjpteXBhc3N3b3Jk'.")
-	vroPort            = flag.Int("vro-port", 0, "vRO listener port")
+	vroPort           = flag.Int("vro-port", 0, "vRO listener port")
 	svrPort           = flag.Int("port", 10001, "Web server port")
 	help              = flag.Bool("help", false, "Display help")
 	versionFlg        = flag.Bool("version", false, "Display application version")
@@ -109,6 +109,7 @@ func main() {
 
 		if *vroHost != "" {
 			(*svcConfig).Arguments = append((*svcConfig).Arguments, "--vro-host", *vroHost)
+			(*svcConfig).Arguments = append((*svcConfig).Arguments, "--vro-port", strconv.Itoa(*vroPort))
 			(*svcConfig).Arguments = append((*svcConfig).Arguments, "--vro-auth", *vroAuth)
 		}
 
