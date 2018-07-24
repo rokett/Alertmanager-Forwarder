@@ -6,8 +6,9 @@ import (
 )
 
 type response struct {
-	Msg   string `json:"msg,omitempty"`
-	Error error  `json:"error,omitempty"`
+	Msg    string     `json:"msg,omitempty"`
+	Error  error      `json:"error,omitempty"`
+	Errors []vroError `json:"errors,omitempty"`
 }
 
 // Send API response back to client

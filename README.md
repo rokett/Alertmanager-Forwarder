@@ -37,7 +37,7 @@ You don't have to use both Graylog and vRO config options.  If you only include 
 Example command:
 
 ````
-AlertmanagerForwarder.exe --service install --graylog-url graylog.mydomain.com --graylog-port 12202 --vro-host vro.mydomain.com --vro-port 8281 --vro-auth dmNvYXBpOmFjcVNaa0V6tGE3bGxQUlRwdDVD
+Alertmanager-Forwarder.exe --service install --graylog-url graylog.mydomain.com --graylog-port 12202 --vro-host vro.mydomain.com --vro-port 8281 --vro-auth dmNvYXBpOmFjcVNaa0V6tGE3bGxQUlRwdDVD
 ````
 
 This will install the service (not started) using the arguments supplied; it will run on the default port of `10001` as the ``port`` flag was not used..  It will be capable of forwarding alerts to Graylog and vRO.  Omit the ``--service`` flag to run it interactively.
