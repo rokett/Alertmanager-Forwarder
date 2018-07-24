@@ -31,20 +31,7 @@ func processGL(logger service.Logger, l *golf.Logger) http.HandlerFunc {
 			}
 
 			for _, alert := range alertGroup.Alerts {
-				payload := map[string]interface{}{
-					"status":       alert.Status,
-					"startsAt":     alert.StartsAt,
-					"endsAt":       alert.EndsAt,
-					"generatorURL": alert.GeneratorURL,
-				}
-
-				for k, v := range alert.Labels.(map[string]interface{}) {
-					payload["label_"+k] = v
-				}
-
-				for k, v := range alert.Annotations.(map[string]interface{}) {
-					payload["annotation_"+k] = v
-				}
+				payload := mapAlert(alert)
 
 				l.Infom(payload, "Alert from Alertmanager")
 			}

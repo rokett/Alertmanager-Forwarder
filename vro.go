@@ -30,6 +30,11 @@ type str struct {
 	Value string `json:"value"`
 }
 
+type vroError struct {
+	Alert map[string]interface{}
+	Msg   string
+}
+
 func processVRO(logger service.Logger, host string, port int, auth string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -52,8 +57,12 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 				return
 			}
 
+			var vroErrors []vroError
+
 			for _, alert := range alertGroup.Alerts {
 				var workflowID string
+
+				al := mapAlert(alert)
 
 				for k, v := range alert.Labels.(map[string]interface{}) {
 					if k == "vro_action" {
@@ -66,6 +75,11 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 					msg := fmt.Sprintf("Alert is missing vro_action; skipping.\n\n%s", alert.Labels)
 					logger.Error(msg)
 
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   "Alert is missing vro_action; skipping",
+					})
+
 					continue
 				}
 
@@ -74,17 +88,34 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 					msg := fmt.Sprintf("Error marshalling alert struct to payload.\n\n%s", err)
 					logger.Error(msg)
 
-					response.Msg = "error marshalling alert struct to payload"
-					response.Error = err
-					response.Send(http.StatusInternalServerError, w)
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
 
-					return
+					continue
 				}
 
 				encoded := base64.StdEncoding.EncodeToString(alertPL)
 
 				// Yes the JSON structure for vRO API requests is pretty horrid!
-				// str -> val -> params -> full payload
+				// str -> val -> params -> full payload.  Example below with a truncated base64 encoded value field.
+				/*
+					{
+						"parameters": [
+							{
+								"type": "string",
+								"name": "json",
+								"scope": "local",
+								"value": {
+									"string": {
+										"value": "eyJzdGF0dXM"
+									}
+								}
+							}
+						]
+					}
+				*/
 				a := str{
 					Value: encoded,
 				}
@@ -110,11 +141,12 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 					msg := fmt.Sprintf("Error marshalling vRO struct to payload.\n\n%s", err)
 					logger.Error(msg)
 
-					response.Msg = "error marshalling vRO struct to payload"
-					response.Error = err
-					response.Send(http.StatusInternalServerError, w)
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
 
-					return
+					continue
 				}
 
 				url := fmt.Sprintf("https://%s:%d/vco/api/workflows/%s/executions/", host, port, workflowID)
@@ -124,11 +156,12 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 					msg := fmt.Sprintf("Error creating vRO HTTP request object.\n\nURL: %s\n\n%s", url, err)
 					logger.Error(msg)
 
-					response.Msg = "error creating vRO HTTP request object"
-					response.Error = err
-					response.Send(http.StatusInternalServerError, w)
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
 
-					return
+					continue
 				}
 
 				authHdr := fmt.Sprintf("Basic %s", auth)
@@ -136,19 +169,17 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 
 				req.Header.Set("Content-Type", "application/json")
 
-				msg := fmt.Sprintf("vRO URL: %s\n\nvRO Authorisation Header: %s", url, authHdr)
-				logger.Info(msg)
-
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					msg := fmt.Sprintf("Error POSTing to vRO.\n\n%s", err)
 					logger.Error(msg)
 
-					response.Msg = "error POSTing to vRO"
-					response.Error = err
-					response.Send(http.StatusInternalServerError, w)
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
 
-					return
+					continue
 				}
 				defer resp.Body.Close()
 
@@ -158,25 +189,41 @@ func processVRO(logger service.Logger, host string, port int, auth string) http.
 				case 201, 202:
 					logger.Info("POST accepted by vRO.\n\nWorkflow execution started.")
 				case 400:
-					logger.Error("Unknown error from vRO.\n\nResponse\n" + string(body))
+					msg := fmt.Sprintf("Unknown error from vRO.\n\nResponse\n%s", string(body))
+					logger.Error(msg)
 
-					response.Msg = fmt.Sprintf("Unknown error from vRO.  %s", string(body))
-					response.Send(http.StatusInternalServerError, w)
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
 
-					return
+					continue
 				case 401:
-					logger.Error("User not authorised to access vRO API")
+					msg := fmt.Sprint("User not authorised to access vRO API")
+					logger.Error(msg)
 
-					response.Msg = "User not authorised to access vRO API"
-					response.Send(http.StatusInternalServerError, w)
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
 
-					return
+					continue
 				default:
 					msg := fmt.Sprintf("Unknown status code from vRO.\n\nStatus Code: %d", resp.StatusCode)
 					logger.Info(msg)
 
-					return
+					vroErrors = append(vroErrors, vroError{
+						Alert: al,
+						Msg:   msg,
+					})
+
+					continue
 				}
+			}
+
+			if len(vroErrors) > 0 {
+				response.Errors = vroErrors
+				response.Send(http.StatusInternalServerError, w)
 			}
 		default:
 			msg := fmt.Sprintf("Invalid HTTP method called; %s", r.Method)
