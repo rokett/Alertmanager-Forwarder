@@ -1,0 +1,14 @@
+# github.com/aphistic/golf v0.0.0-20180712155816-02c07f170c5a
+github.com/aphistic/golf
+# github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c
+github.com/google/uuid
+# github.com/kardianos/osext v0.0.0-20170510131534-ae77be60afb1
+github.com/kardianos/osext
+# github.com/kardianos/service v0.0.0-20180320115954-615a14ed7509
+github.com/kardianos/service
+# golang.org/x/sys v0.0.0-20190412213103-97732733099d
+golang.org/x/sys/windows
+golang.org/x/sys/windows/registry
+golang.org/x/sys/windows/svc
+golang.org/x/sys/windows/svc/eventlog
+golang.org/x/sys/windows/svc/mgr
